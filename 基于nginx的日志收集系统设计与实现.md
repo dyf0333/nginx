@@ -17,12 +17,16 @@
 　　首先，用户的行为会触发浏览器对被统计页面的一个http请求，页面中的埋点javascript片段会被执行，这小段被加在网页中的javascript代码，会动态创建一个script标签，并将src指向一个单独的js文件，此时这个单独的js文件（图1绿色节点）会被浏览器请求到并执行，这个js往往就是真正的数据收集脚本。
 　　数据收集完成后，js会请求一个后端的数据收集脚本（图1中的backend），一般伪装成图片的动态脚本程序，可能由php、python或其它服务端语言编写，js会将收集到的数据通过http参数的方式传递给后端脚本，后端脚本解析参数并按固定格式记录到访问日志，同时在http响应中给客户端cookie中种植一些用于追踪的唯一标识。
 
-##2.系统的设计实现
+## 2.系统的设计实现
+
 　　以上述原理，搭建一个访问日志收集系统工作如下：
-![@图2. 访问数据收集系统工作分解|center](../src/1487845657758.png)
-###2.1前端开发
+  
+![@图2. 访问数据收集系统工作分解|center](../master/src/1487845657758.png)
+
+### 2.1前端开发
    
-####2.1.1确定收集的信息
+#### 2.1.1确定收集的信息
+
 | name |    名称	| 途径	 |备注|
 | :-------- | :--------| :------ |:----|
 ||网站标识	|javascript	|自定义对象|
@@ -66,7 +70,8 @@
 
 <hr>
 请求总时间 & 响应时间 （`$request_time` & `$upstream_response_time`）
-![|center](../src/1487846181326.png)
+
+![|center](../master/src/1487846181326.png)
 
 `request_time`
 官网描述：request processing time in seconds with a milliseconds resolution; time elapsed between the first bytes were read from the client and the log write after the last bytes were sent to the client 。
@@ -93,7 +98,7 @@ remote_addr代表客户端的IP，但它的值不是由客户端提供的，而�
 
 <hr>
                	
-####2.1.2埋点代码
+#### 2.1.2埋点代码
 在目标页面中插入一段javascript片段，这个片段往往被称为埋点代码。
 ```vbscript-html
 <html>
@@ -173,9 +178,9 @@ js统计脚本
 　　4、请求一个后端脚本，将信息放在http request参数中携带给后端脚本。
 　　javascript请求后端脚本常用的方法是ajax，但是ajax是不能跨域请求的。这里ma.js在被统计网站的域内执行，而后端脚本在另外的域，ajax行不通。一种通用的方法是js脚本创建一个Image对象，将Image对象的src属性指向后端脚本并携带参数，此时即实现了跨域请求后端。
 
-###2.2后端开发
+### 2.2后端开发
 
-####2.2.1设计日志格式
+#### 2.2.1设计日志格式
 nginx配置文件中定义日志格式如下
 >log_format logName "\$tempA $tempB ...";
 
@@ -184,7 +189,7 @@ nginx配置文件中定义日志格式如下
 　　注意这里以$u_开头的是我们系统自定义的变量，其它的是nginx内置变量。
 
 
-####2.2.2 编写后端脚本
+#### 2.2.2 编写后端脚本
 　　我们使用nginx的access_log做日志收集，不过有个问题就是nginx配置本身的逻辑表达能力有限，所以选用了`OpenResty`的lua扩展。  
 　　`OpenResty ™` 是一个基于 Nginx 与 Lua 的高性能 Web 平台，其内部集成了大量精良的 Lua 库、第三方模块以及大多数的依赖项。用于方便地搭建能够处理超高并发、扩展性极高的动态 Web 应用、Web 服务和动态网关。其中的核心是通过ngx_lua模块集成了Lua，从而在nginx配置文件中可以通过Lua来表述业务。
 
@@ -273,7 +278,7 @@ location  /i-log{
 　　之所以要设置cookie是因为如果要跟踪唯一访客，通常做法是如果在请求时发现客户端没有指定的跟踪cookie，则根据规则生成一个全局唯一的cookie并种植给用户，否则Set-cookie中放置获取到的跟踪cookie以保持同一用户cookie不变（见图4）。 这种做法虽然不是完美的（例如用户清掉cookie或更换浏览器会被认为是两个用户），但是是目前被广泛使用的手段。
 ![Alt text|center](../src/1487847573762.png)
 
-####2.2.3日志轮转
+#### 2.2.3日志轮转
 　　真正的日志收集系统访问日志会非常多，时间一长文件变得很大，而且日志放在一个文件不便于管理。所以通常要按时间段将日志切分，例如每天或每小时切分一个日志。我这里为了效果明显，每一小时切分一个日志。我是通过crontab定时调用一个shell脚本实现的，shell脚本如下：
 
 >_prefix="/path/to/nginx"
@@ -286,8 +291,8 @@ location  /i-log{
 >59  *  *  *  * root /path/to/directory/rotatelog.sh
 
 在每个小时的59分启动这个脚本进行日志轮转操作。
-###2.3测试
-###2.4展示、分析（todo）
+### 2.3测试
+### 2.4展示、分析（todo）
 
  > 访问量（PV），访客数（UV）和独立IP数（IP），分不同业务数据分析。
 
@@ -297,10 +302,10 @@ location  /i-log{
 
 
 
-##3日志系统流程实现
-###3.1安装nginx
+## 3日志系统流程实现
+### 3.1安装nginx
 >建议安装1.6以上
-###3.2安装Lua扩展
+### 3.2安装Lua扩展
 `ngx_lua_module` 是一个nginx http模块，它把 lua 解析器内嵌到 nginx，用来解析并执行lua 语言编写的网页后台脚本
 >建议1.若服务器已经在运行，且ngxin版本低于1.6，先平滑升级到1.6及以上，再重新编译同版本的nginx，防止业务系统崩溃
 >建议2.若服务器还未正式运行，可使用如下方法，直接下载新的高版本nginx进行编译安装
@@ -495,7 +500,7 @@ html内容
 
 ```
 
-###3.4编写后端（nginx.conf）代码
+### 3.4编写后端（nginx.conf）代码
 
 ```
 #普通日志记录
@@ -598,8 +603,8 @@ internal指令指定某个location只能被“内部的”请求调用，外部�
 >}
 
 
-###3.5日志轮转
-####3.5.1编写日志存储sh文件
+### 3.5日志轮转
+#### 3.5.1编写日志存储sh文件
 ```
 #! /bin/bash
 _prefix="/home/wwwlogs"
@@ -621,8 +626,8 @@ kill -USR1 `cat /usr/local/nginx/logs/nginx.pid`
 ```
 
 
-####3.5.3定时任务的php实现
-#####3.5.3.1 workerman-crontab
+#### 3.5.3定时任务的php实现
+##### 3.5.3.1 workerman-crontab
 
 https://github.com/shuiguang/workerman-crontab
 >运行环境要求(php>=5.3.3)

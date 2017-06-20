@@ -4,15 +4,14 @@
 
 日志收集统计系统以网站数据统计为基础，进行数据收集，形成日志，后续展示查询、进行分析。
 
-[TOC]
 
-
-##1.数据收集原理分析
+## 1.数据收集原理分析
 
 　　网站统计分析需要收集到用户浏览目标网站的行为（如打开某网页、点击某按钮等）及行为附加数据（如某按钮产生的行为数据等）。早期的网站统计往往只收集一种用户行为：页面的打开。而后用户在页面中的行为均无法收集。
 　　这种收集策略能满足基本的流量分析、来源分析、内容分析及访客属性等常用分析视角，后来，Google在其产品谷歌分析中创新性的引入了可定制的数据收集脚本，用户通过谷歌分析定义好的可扩展接口，只需编写少量的javascript代码就可以实现自定义事件和自定义指标的跟踪和分析。目前百度统计、搜狗分析等产品均照搬了谷歌分析的模式。
-###1.1流程概览
-![@图1. 网站统计数据收集基本流程|center](./1487845617089.png)
+### 1.1流程概览
+
+![@图1. 网站统计数据收集基本流程|center](../src/1487845617089.png)
 
 
 　　首先，用户的行为会触发浏览器对被统计页面的一个http请求，页面中的埋点javascript片段会被执行，这小段被加在网页中的javascript代码，会动态创建一个script标签，并将src指向一个单独的js文件，此时这个单独的js文件（图1绿色节点）会被浏览器请求到并执行，这个js往往就是真正的数据收集脚本。
@@ -20,7 +19,7 @@
 
 ##2.系统的设计实现
 　　以上述原理，搭建一个访问日志收集系统工作如下：
-![@图2. 访问数据收集系统工作分解|center](./1487845657758.png)
+![@图2. 访问数据收集系统工作分解|center](../src/1487845657758.png)
 ###2.1前端开发
    
 ####2.1.1确定收集的信息
@@ -67,7 +66,7 @@
 
 <hr>
 请求总时间 & 响应时间 （`$request_time` & `$upstream_response_time`）
-![|center](./1487846181326.png)
+![|center](../src/1487846181326.png)
 
 `request_time`
 官网描述：request processing time in seconds with a milliseconds resolution; time elapsed between the first bytes were read from the client and the log write after the last bytes were sent to the client 。
@@ -80,7 +79,7 @@
 所以如果使用nginx的accesslog查看php程序中哪些接口比较慢的话，可对比log_format中加入`upstream_response_time` 和 `request_time` 。
 <hr>
 nginx中`remote_addr` & `x_forwarded_for`参数区别
-![Alt text|center](./1487846394808.png)
+![Alt text|center](../src/1487846394808.png)
 `remote_addr`
 remote_addr代表客户端的IP，但它的值不是由客户端提供的，而是服务端根据客户端的ip指定的，当你的浏览器访问某个网站时，假设中间没有任何代理，那么网站的web服务器（Nginx，Apache等）就会把remote_addr设为你的机器IP，如果你用了某个代理，那么你的浏览器会先访问这个代理，然后再由这个代理转发到网站，这样web服务器就会把remote_addr设为这台代理机器的IP
 `x_forwarded_for`
@@ -272,7 +271,7 @@ location  /i-log{
 　　4、生成一副1×1的空gif图片作为响应内容并将响应头的Content-type设为image/gif。
 　　5、在响应头中通过Set-cookie设置一些需要的cookie信息。
 　　之所以要设置cookie是因为如果要跟踪唯一访客，通常做法是如果在请求时发现客户端没有指定的跟踪cookie，则根据规则生成一个全局唯一的cookie并种植给用户，否则Set-cookie中放置获取到的跟踪cookie以保持同一用户cookie不变（见图4）。 这种做法虽然不是完美的（例如用户清掉cookie或更换浏览器会被认为是两个用户），但是是目前被广泛使用的手段。
-![Alt text|center](./1487847573762.png)
+![Alt text|center](../src/1487847573762.png)
 
 ####2.2.3日志轮转
 　　真正的日志收集系统访问日志会非常多，时间一长文件变得很大，而且日志放在一个文件不便于管理。所以通常要按时间段将日志切分，例如每天或每小时切分一个日志。我这里为了效果明显，每一小时切分一个日志。我是通过crontab定时调用一个shell脚本实现的，shell脚本如下：
@@ -658,7 +657,7 @@ https://github.com/shuiguang/windows-crontab
 https://github.com/qq8044023/timePHP
 >php版本要求5.6及以上
 
-![Alt text|center](./1487905631941.png)
+![Alt text|center](../src/1487905631941.png)
 
 
 例：

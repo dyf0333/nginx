@@ -15,7 +15,8 @@
 
 
 　　首先，用户的行为会触发浏览器对被统计页面的一个http请求，页面中的埋点javascript片段会被执行，这小段被加在网页中的javascript代码，会动态创建一个script标签，并将src指向一个单独的js文件，此时这个单独的js文件（图1绿色节点）会被浏览器请求到并执行，这个js往往就是真正的数据收集脚本。
-　　数据收集完成后，js会请求一个后端的数据收集脚本（图1中的backend），一般伪装成图片的动态脚本程序，可能由php、python或其它服务端语言编写，js会将收集到的数据通过http参数的方式传递给后端脚本，后端脚本解析参数并按固定格式记录到访问日志，同时在http响应中给客户端cookie中种植一些用于追踪的唯一标识。
+　　
+  数据收集完成后，js会请求一个后端的数据收集脚本（图1中的backend），一般伪装成图片的动态脚本程序，可能由php、python或其它服务端语言编写，js会将收集到的数据通过http参数的方式传递给后端脚本，后端脚本解析参数并按固定格式记录到访问日志，同时在http响应中给客户端cookie中种植一些用于追踪的唯一标识。
 
 ## 2.系统的设计实现
 
@@ -76,15 +77,22 @@
 `request_time`
 官网描述：request processing time in seconds with a milliseconds resolution; time elapsed between the first bytes were read from the client and the log write after the last bytes were sent to the client 。
 指的就是从接受用户请求的第一个字节到发送完响应数据的时间，即包括接收请求数据时间、程序响应时间、输出响应数据时间。
+
 `upstream_response_time`
 官网描述：keeps times of responses obtained from upstream servers; times are kept in seconds with a milliseconds resolution. Several response times are separated by commas and colons like addresses in the $upstream_addr variable
 是指从Nginx向后端（php-fpm)建立连接开始到接受完数据然后关闭连接为止的时间。
+
 <br>
+
 从上面的描述可以看出，`request_time`肯定比`upstream_response_time`值大，特别是使用POST方式传递参数时，因为Nginx会把request body缓存住，接受完毕后才会把数据一起发给后端。所以如果用户网络较差，或者传递数据较大时，`request_time`会比`upstream_response_time`大很多。
 所以如果使用nginx的accesslog查看php程序中哪些接口比较慢的话，可对比log_format中加入`upstream_response_time` 和 `request_time` 。
+
 <hr>
+
 nginx中`remote_addr` & `x_forwarded_for`参数区别
-![Alt text|center](../src/1487846394808.png)
+
+![Alt text|center](../master/src/1487846394808.png)
+
 `remote_addr`
 remote_addr代表客户端的IP，但它的值不是由客户端提供的，而是服务端根据客户端的ip指定的，当你的浏览器访问某个网站时，假设中间没有任何代理，那么网站的web服务器（Nginx，Apache等）就会把remote_addr设为你的机器IP，如果你用了某个代理，那么你的浏览器会先访问这个代理，然后再由这个代理转发到网站，这样web服务器就会把remote_addr设为这台代理机器的IP
 `x_forwarded_for`
@@ -172,11 +180,16 @@ js统计脚本
 })();
 ```
 　数据收集脚本被请求后会被执行，这个脚本一般要做如下几件事：
-　　1、通过浏览器内置javascript对象收集信息，如页面title（通过document.title）、referrer（上一跳url，通过document.referrer）、用户显示器分辨率（通过windows.screen）、cookie信息（通过document.cookie）等等一些信息。
-　　2、解析自定义数据，可能会包括用户自定义的事件跟踪、业务数据等。
-　　3、将上面两步收集的数据按预定义格式解析并拼接。
-　　4、请求一个后端脚本，将信息放在http request参数中携带给后端脚本。
-　　javascript请求后端脚本常用的方法是ajax，但是ajax是不能跨域请求的。这里ma.js在被统计网站的域内执行，而后端脚本在另外的域，ajax行不通。一种通用的方法是js脚本创建一个Image对象，将Image对象的src属性指向后端脚本并携带参数，此时即实现了跨域请求后端。
+　　
+  1、通过浏览器内置javascript对象收集信息，如页面title（通过document.title）、referrer（上一跳url，通过document.referrer）、用户显示器分辨率（通过windows.screen）、cookie信息（通过document.cookie）等等一些信息。
+　　
+  2、解析自定义数据，可能会包括用户自定义的事件跟踪、业务数据等。
+　　
+  3、将上面两步收集的数据按预定义格式解析并拼接。
+　　
+  4、请求一个后端脚本，将信息放在http request参数中携带给后端脚本。
+　　
+  javascript请求后端脚本常用的方法是ajax，但是ajax是不能跨域请求的。这里ma.js在被统计网站的域内执行，而后端脚本在另外的域，ajax行不通。一种通用的方法是js脚本创建一个Image对象，将Image对象的src属性指向后端脚本并携带参数，此时即实现了跨域请求后端。
 
 ### 2.2后端开发
 
@@ -194,8 +207,11 @@ nginx配置文件中定义日志格式如下
 　　`OpenResty ™` 是一个基于 Nginx 与 Lua 的高性能 Web 平台，其内部集成了大量精良的 Lua 库、第三方模块以及大多数的依赖项。用于方便地搭建能够处理超高并发、扩展性极高的动态 Web 应用、Web 服务和动态网关。其中的核心是通过ngx_lua模块集成了Lua，从而在nginx配置文件中可以通过Lua来表述业务。
 
 >作者：章亦春（agentzh）
+
      http://openresty.org/
+     
      关于ngx_lua可以参考：
+     
      https://github.com/chaoslawful/lua-nginx-module。
 
 　nginx.conf文件添加以下功能
@@ -270,21 +286,32 @@ location  /i-log{
         }
 ```
 1.gif是一个伪装成gif的脚本。这种后端脚本一般要完成以下几件事情：
-　　1、解析http请求参数的到信息。
-　　2、从服务器（WebServer）中获取一些客户端无法获取的信息，如访客ip等。
-　　3、将信息按格式写入log。
-　　4、生成一副1×1的空gif图片作为响应内容并将响应头的Content-type设为image/gif。
-　　5、在响应头中通过Set-cookie设置一些需要的cookie信息。
-　　之所以要设置cookie是因为如果要跟踪唯一访客，通常做法是如果在请求时发现客户端没有指定的跟踪cookie，则根据规则生成一个全局唯一的cookie并种植给用户，否则Set-cookie中放置获取到的跟踪cookie以保持同一用户cookie不变（见图4）。 这种做法虽然不是完美的（例如用户清掉cookie或更换浏览器会被认为是两个用户），但是是目前被广泛使用的手段。
-![Alt text|center](../src/1487847573762.png)
+　　
+  1、解析http请求参数的到信息。
+　　
+  2、从服务器（WebServer）中获取一些客户端无法获取的信息，如访客ip等。
+　　
+  3、将信息按格式写入log。
+　　
+  4、生成一副1×1的空gif图片作为响应内容并将响应头的Content-type设为image/gif。
+　　
+  5、在响应头中通过Set-cookie设置一些需要的cookie信息。
+　　
+  之所以要设置cookie是因为如果要跟踪唯一访客，通常做法是如果在请求时发现客户端没有指定的跟踪cookie，则根据规则生成一个全局唯一的cookie并种植给用户，否则Set-cookie中放置获取到的跟踪cookie以保持同一用户cookie不变（见图4）。 这种做法虽然不是完美的（例如用户清掉cookie或更换浏览器会被认为是两个用户），但是是目前被广泛使用的手段。
+  
+![Alt text|center](../master/src/1487847573762.png)
 
 #### 2.2.3日志轮转
 　　真正的日志收集系统访问日志会非常多，时间一长文件变得很大，而且日志放在一个文件不便于管理。所以通常要按时间段将日志切分，例如每天或每小时切分一个日志。我这里为了效果明显，每一小时切分一个日志。我是通过crontab定时调用一个shell脚本实现的，shell脚本如下：
 
 >_prefix="/path/to/nginx"
+
 >time=`date +%Y%m%d%H`
+
 >mv \${_prefix}/logs/ma.log  \${_prefix}/logs/ma/ma-${time}.log
+
 >kill -USR1 `cat ${_prefix}/logs/nginx.pid`
+
 
 　　这个脚本将ma.log移动到指定文件夹并重命名为ma-{yyyymmddhh}.log，然后向nginx发送USR1信号令其重新打开日志文件。
 　　然后再/etc/crontab里加入一行：
@@ -297,8 +324,10 @@ location  /i-log{
  > 访问量（PV），访客数（UV）和独立IP数（IP），分不同业务数据分析。
 
 　　通过上面的分析和开发可以大致理解一个网站统计的日志收集系统是如何工作的。有了这些日志，就可以进行后续的分析了。
-　　注意，原始日志最好尽量多的保留信息而不要做过多过滤和处理。后面的系统根据原始日志可以分析出很多东西，例如通过IP库可以定位访问者的地域、user agent中可以得到访问者的操作系统、浏览器等信息，再结合复杂的分析模型，就可以做流量、来源、访客、地域、路径等分析了。当然，一般不会直接对原始日志分析，而是会将其清洗格式化后转存到其它地方，如MySQL或HBase中再做分析。
-　　分析部分的工作有很多开源的基础设施可以使用，例如实时分析可以使用Storm，而离线分析可以使用Hadoop。
+　　
+  注意，原始日志最好尽量多的保留信息而不要做过多过滤和处理。后面的系统根据原始日志可以分析出很多东西，例如通过IP库可以定位访问者的地域、user agent中可以得到访问者的操作系统、浏览器等信息，再结合复杂的分析模型，就可以做流量、来源、访客、地域、路径等分析了。当然，一般不会直接对原始日志分析，而是会将其清洗格式化后转存到其它地方，如MySQL或HBase中再做分析。
+　　
+  分析部分的工作有很多开源的基础设施可以使用，例如实时分析可以使用Storm，而离线分析可以使用Hadoop。
 
 
 
@@ -658,11 +687,11 @@ git clone https://github.com/shuiguang/workerman-crontab.git
 https://github.com/shuiguang/windows-crontab
 
 
-#####3.5.3.2 timephp
+##### 3.5.3.2 timephp
 https://github.com/qq8044023/timePHP
 >php版本要求5.6及以上
 
-![Alt text|center](../src/1487905631941.png)
+![Alt text|center](../master/src/1487905631941.png)
 
 
 例：
@@ -677,7 +706,7 @@ https://github.com/qq8044023/timePHP
 >    "name"=>"clearroom"
 
 
-##4Todo
+## 4Todo
 谷歌分析
 http://www.google.com/analytics/
 百度统计

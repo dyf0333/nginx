@@ -14,3 +14,7 @@ nginx日志系统的基础，需要用到lua部分功能
 
 ## Https通讯原理
 
+## nginx的I/O多路复用机制浅析以及与apache比较
+    
+    select、poll、epoll浅析
+    原理层面nginx与apache的比较

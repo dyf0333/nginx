@@ -18,3 +18,7 @@ nginx日志系统的基础，需要用到lua部分功能
     
     select、poll、epoll浅析
     原理层面nginx与apache的比较
+    
+## nginx参数配置优化
+    
+    通过nginx参数的配置，进行性能优化

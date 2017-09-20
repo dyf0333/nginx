@@ -28,3 +28,5 @@ nginx日志系统的基础，需要用到lua部分功能
     LVS的介绍
     3种负载模式：NAT、TUN、DR
     10种调度算法
+    
+    与nginx类比
